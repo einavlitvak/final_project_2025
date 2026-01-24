@@ -8,8 +8,8 @@ import copy
 # Configuration
 COLS = 8
 ROWS = 12
-CELL_SIZE = 50
-MARGIN = 60
+CELL_SIZE = 42
+MARGIN = 50
 WIN_WIDTH = COLS * CELL_SIZE + 2 * MARGIN
 WIN_HEIGHT = ROWS * CELL_SIZE + 2 * MARGIN
 
@@ -32,6 +32,10 @@ class ElisaPlateDesigner:
     def __init__(self, root):
         self.root = root
         self.root.title("ELISA Plate Designer")
+        try:
+            self.root.state('zoomed') # Maximize on Windows
+        except:
+            pass # Ignore if not supported
         
         # Data Structure: (col, row) -> dict
         # { 'type': 'CAL' or 'EXP', 'exp': int, 'subj': int, 'samp': int, 'rep': int, 'conc': float/None }
@@ -74,12 +78,33 @@ class ElisaPlateDesigner:
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Left Panel: Canvas
+        # Left Panel
         left_panel = tk.Frame(main_frame)
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
+        # Grid Canvas
         self.canvas = tk.Canvas(left_panel, width=WIN_WIDTH, height=WIN_HEIGHT, bg='white')
-        self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.canvas.pack(side=tk.TOP, padx=10, pady=10)
+        
+        # Legend
+        legend_frame = tk.Frame(left_panel, bg="#f0f0f0", pady=10, relief="groove", borderwidth=1)
+        legend_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        
+        shortcuts = [
+            ("Space", "New Subject"),
+            ("E", "New Experiment"),
+            ("R", "Rotate Replicates"),
+            ("Ctrl+Z", "Undo"),
+            ("Drag", "Select/Fill")
+        ]
+        
+        for key, desc in shortcuts:
+            f = tk.Frame(legend_frame, bg="#f0f0f0")
+            f.pack(side=tk.LEFT, padx=15)
+            k = tk.Label(f, text=key, font=("Arial", 9, "bold"), bg="#ddd", padx=6, pady=2, relief="raised")
+            k.pack(side=tk.LEFT, padx=(0, 5))
+            d = tk.Label(f, text=desc, font=("Arial", 9), bg="#f0f0f0")
+            d.pack(side=tk.LEFT)
         
         # Right Panel: Sidebar
         right_panel = tk.Frame(main_frame, width=300, bg="#f0f0f0")
@@ -219,11 +244,11 @@ class ElisaPlateDesigner:
         # Draw Labels
         for c in range(COLS):
             x = MARGIN + c * CELL_SIZE + CELL_SIZE / 2
-            self.canvas.create_text(x, MARGIN / 2, text=COL_LABELS[c], font=("Arial", 12, "bold"))
+            self.canvas.create_text(x, MARGIN / 2, text=COL_LABELS[c], font=("Arial", 11, "bold"))
             
         for r in range(ROWS):
             y = MARGIN + r * CELL_SIZE + CELL_SIZE / 2
-            self.canvas.create_text(MARGIN / 2, y, text=ROW_LABELS[r], font=("Arial", 12, "bold"))
+            self.canvas.create_text(MARGIN / 2, y, text=ROW_LABELS[r], font=("Arial", 11, "bold"))
 
         # Draw Cells
         for r in range(ROWS):
@@ -265,7 +290,7 @@ class ElisaPlateDesigner:
                 
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=fill_color, outline=outline_color, width=width)
                 if text:
-                     self.canvas.create_text(x1+CELL_SIZE/2, y1+CELL_SIZE/2, text=text, font=("Arial", 8))
+                     self.canvas.create_text(x1+CELL_SIZE/2, y1+CELL_SIZE/2, text=text, font=("Arial", 7))
 
         # Draw Subject Borders and Replicate Lines
         self.draw_overlays()
@@ -503,7 +528,6 @@ class ElisaPlateDesigner:
         if self.subject_closed:
             status += " | SUBJ CLOSED (Next drag -> New Subj)"
             
-        status += "   [Space]: Close Subj | [E]: Close Exp | [R]: Rotate | [Ctrl+Z]: Undo"
         self.lbl_status.config(text=status)
 
     def export_csv(self):
@@ -660,11 +684,11 @@ class ElisaPlateDesigner:
         
         # Load Fonts (Default simple)
         try:
-            font = ImageFont.truetype("arial.ttf", 15)
-            small_font = ImageFont.truetype("arial.ttf", 10)
+            font = ImageFont.truetype("arial.ttf", 14)
+            small_font = ImageFont.truetype("arial.ttf", 9)
         except:
-            font = ImageFont.load_default()
-            small_font = ImageFont.load_default()
+             font = ImageFont.load_default()
+             small_font = ImageFont.load_default()
 
         # Draw Labels
         for c in range(COLS):
