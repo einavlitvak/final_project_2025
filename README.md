@@ -50,6 +50,12 @@ This project automates the analysis of ELISA (Enzyme-Linked Immunosorbent Assay)
     ```
 3.  Follow the GUI prompts to select files and configure analysis parameters.
 
+    > **Quick Start with Examples**:
+    > *   For **Layout CSV**, select: `example_layout.csv`
+    > *   For **Instrument Excel**, select: `insulin ELISA example.xlsx`
+    > *   For **Master Excel**, select: `insulin ELISA example_master.xlsx`
+    
+
 #### Testing
 To verify the core logic of both tools:
 ```bash
