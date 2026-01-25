@@ -1,5 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 .venv
-__pycache__
+venv/
+ENV/
+
+# Excel & Data (Optional: ignore data files to keep repo clean)
+*.xlsx
+*.xls
+*.csv
+# Keep example data if needed, but usually ignore user data
+
+# Plots
 *.png
-*.csv   
-*.log

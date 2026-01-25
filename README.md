@@ -1,67 +1,60 @@
-# ELISA Plate Layout Designer
+# ELISA Data Analyzer
 
-A Python GUI application for designing and populating ELISA plate layouts. This tool allows researchers to visually map out experiments on a standard 96-well plate, manage subjects and samples, and export the final layout to PNG or CSV.
+**Project for WIS Python Course**
 
-## Features
+## Project Proposal / Description
 
--   **Interactive Grid**: 8x12 grid representing a 96-well plate.
--   **Drag-to-Select**: Easily populate wells by clicking and dragging.
--   **Calibration Curve**: Pre-filled calibration rows (1 and 2).
--   **Experiment & Subject Management**:
-    -   Automatically groups samples by Subject and Experiment.
-    -   Visual distinction between different experiments (color-coded).
-    -   Black borders delineate distinct subjects/experiments.
--   **Replicate Handling**:
-    -   Supports both Vertical (default) and Horizontal replicate orientation.
-    -   Visual lines connect replicates of the same sample.
--   **Custom Subject Names**: Sidebar interface to name subjects (e.g., "Mouse 1") which updates the grid in real-time.
--   **Sample Counter**: Automatically increments sample IDs (t0, t1, t2...) starting from t0.
--   **Export/Import**:
-    -   Export layout to **PNG** image for presentations.
-    -   Export data to **CSV** for analysis.
-    -   Import **CSV** to restore a previous session.
--   **Undo Support**: Undo the last action with `Ctrl+Z`.
+### 1. What does this project do?
+This project automates the analysis of ELISA (Enzyme-Linked Immunosorbent Assay) experiments. Manual analysis of ELISA data from Tecan plate readers is time-consuming and prone to precision errors. This project provides a **suite of two tools**:
 
-## Installation
+1.  **ELISA Layout Designer**: A visual tool to map your plate (Standards, Samples, Blanks) and export a standard CSV map.
+2.  **ELISA Data Analyzer**: A computational tool that takes the layout and raw instrument data to:
+    -   **Parse** raw Tecan Excel/CSV output files automatically.
+    -   **Correct** optical density (OD) readings (OD450 - OD630) and subtract blanks.
+    -   **Calibrate** concentrations using a linear regression model from standard curves.
+    -   **Analyze** statistics automatically (Normality, Homogeneity, T-Test/ANOVA, Post-Hoc).
+    -   **Visualize** results with publication-ready plots.
+    -   **Export** a "Master File" combining raw data and full validation reports.
 
-1.  **Prerequisites**: Python 3.8 or higher.
-2.  **Clone/Download** this repository.
-3.  **Create a Virtual Environment** (recommended):
-    ```bash
-    python -m venv .venv
-    # Windows
-    .\.venv\Scripts\activate
-    # Mac/Linux
-    source .venv/bin/activate
-    ```
-4.  **Install Dependencies**:
+### 2. Input and Output
+*   **Input**:
+    *   **Layout File**: A CSV defining which well contains which sample/standard (created via the built-in Layout Designer).
+    *   **Instrument File**: The raw `.xlsx` or `.csv` export from the Tecan Infinite M200 Pro machine.
+*   **Output**:
+    *   **Master Excel File**: Appends a new sheet with Raw Data + Analysis Tables.
+    *   **Plots**: `calibration_curve.png`, `results_bar_graph.png`, `significance_plot.png`.
+
+### 3. Technicalities
+#### Dependencies
+*   `pandas`, `numpy`: Data manipulation.
+*   `scipy`: Advanced statistical testing (stats).
+*   `matplotlib`, `seaborn`: Plotting.
+*   `openpyxl`: Excel I/O.
+*   `tkinter`: GUI (standard library).
+
+#### Installation
+1.  Clone the repository.
+2.  Install dependencies:
     ```bash
     pip install -r requirements.txt
     ```
-    *Note: `tkinter` is included with standard Python installations.*
 
-## Usage
+#### Running the Project
+1.  **Define Layout** (if needed):
+    ```bash
+    python designer/elisa_layout_designer.py
+    ```
+2.  **Run Analysis**:
+    ```bash
+    python analyzer/elisa_data_analyzer.py
+    ```
+3.  Follow the GUI prompts to select files and configure analysis parameters.
 
-Run the application:
+#### Testing
+To verify the core logic of both tools:
 ```bash
-python elisa_layout_designer.py
+python -m unittest discover tests
 ```
 
-### Controls
-
-| Action | Key / Input | Description |
-| :--- | :--- | :--- |
-| **Close Subject** | `Space Bar` | Marks the current Subject as finished. The next selection will start a new Subject. |
-| **Close Experiment** | `E` | Marks the current Experiment as finished. The next selection will start a new Experiment (new color). |
-| **Rotate Replicates** | `R` | Toggles replicate orientation between Vertical (stack down) and Horizontal (side-by-side). |
-| **Undo** | `Ctrl+Z` | Undoes the last grid addition. |
-| **Name Subject** | Sidebar Input | Type in the text field in the right sidebar to rename a subject. |
-
-### Workflow Example
-
-1.  Launch the app.
-2.  **Add Subject 1**: Drag across `A3` to `A4` (2 replicates).
-3.  **Add Subject 2**: Press `Space`, then drag `B3` to `B4`.
-4.  **Rename**: Look at the sidebar, find "S1", type "Control".
-5.  **New Experiment**: Press `E`. Drag `A5`...
-6.  **Export**: Use the **File** menu to save your work.
+---
+*This project was written as part of the [WIS Python programming course](https://github.com/Code-Maven/wis-python-course-2025-10).*

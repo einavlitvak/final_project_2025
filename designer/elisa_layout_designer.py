@@ -4,6 +4,7 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 import string
 import copy
+import designer_core
 
 # Configuration
 COLS = 8
@@ -13,7 +14,7 @@ MARGIN = 50
 WIN_WIDTH = COLS * CELL_SIZE + 2 * MARGIN
 WIN_HEIGHT = ROWS * CELL_SIZE + 2 * MARGIN
 
-COL_LABELS = [chr(i) for i in range(ord('A'), ord('A') + COLS)]
+COL_LABELS = [chr(i) for i in range(ord('A') + COLS - 1, ord('A') - 1, -1)]
 ROW_LABELS = [str(i + 1) for i in range(ROWS)]
 
 CALIBRATION_CONCS = [6.4, 3.2, 1.6, 0.8, 0.4, 0.2, 0.1, 0.0]
@@ -445,63 +446,15 @@ class ElisaPlateDesigner:
             self.next_sample_id = 0
             self.subject_closed = False
 
-        # Fill Logic
-        # Experiment ID: self.current_exp
-        # Subject ID: self.current_subj
+        # Fill Logic from Core
+        updates, new_samp_id = designer_core.fill_cells(
+            c1, r1, c2, r2, 
+            self.current_exp, self.current_subj, self.next_sample_id, 
+            self.orientation
+        )
         
-        cells_to_fill = []
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                cells_to_fill.append((c, r))
-
-        if not cells_to_fill: return
-
-        # Strategy:
-        # vertical mode: Unique samples vary by COLUMN.
-        #                Replicates vary by ROW within column.
-        # horizontal mode: Unique samples vary by ROW.
-        #                  Replicates vary by COLUMN within row.
-        
-        # We need to map (c, r) -> (sample_offset, replicate_offset)
-        # origin (c1, r1)
-        
-        # However, what if selection is non-uniform? It is a rect.
-        
-        if self.orientation == 'vertical':
-            # Cols define samples, Rows define replicates
-            for c in range(c1, c2 + 1):
-                # New Sample
-                s_id = self.next_sample_id
-                self.next_sample_id += 1
-                
-                rep_count = 1
-                for r in range(r1, r2 + 1):
-                   self.grid_data[(c, r)] = {
-                        'type': 'EXP',
-                        'exp': self.current_exp,
-                        'subj': self.current_subj,
-                        'samp': s_id,
-                        'rep': rep_count
-                   }
-                   rep_count += 1
-        
-        else: # horizontal
-            # Rows define samples, Cols define replicates
-            for r in range(r1, r2 + 1):
-                # New Sample
-                s_id = self.next_sample_id
-                self.next_sample_id += 1
-                
-                rep_count = 1
-                for c in range(c1, c2 + 1):
-                    self.grid_data[(c, r)] = {
-                        'type': 'EXP',
-                        'exp': self.current_exp,
-                        'subj': self.current_subj,
-                        'samp': s_id,
-                        'rep': rep_count
-                   }
-                    rep_count += 1
+        self.grid_data.update(updates)
+        self.next_sample_id = new_samp_id
 
     def on_space(self, event):
         self.subject_closed = True
@@ -534,47 +487,18 @@ class ElisaPlateDesigner:
         filename = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")])
         if not filename: return
         
-        data_rows = []
-        for r in range(ROWS):
-            for c in range(COLS):
-                cell = self.grid_data.get((c, r))
-                row_label = ROW_LABELS[r]
-                col_label = COL_LABELS[c]
-                well_id = f"{col_label}{row_label}"
-                
-                if cell:
-                    c_type = cell['type']
-                    if c_type == 'CAL':
-                        data_rows.append({
-                            'Well': well_id, 'Type': 'Calibration', 
-                            'Concentration': cell['conc'], 
-                            'Experiment': '', 'Subject': '', 'Sample': '', 'Replicate': '',
-                            'Subject Name': ''
-                        })
-                    else:
-                        exp = cell['exp']
-                        subj = cell['subj']
-                        subj_name = self.subject_names.get((exp, subj), tk.StringVar()).get()
-                        
-                        data_rows.append({
-                            'Well': well_id, 'Type': 'Experiment',
-                            'Concentration': '',
-                            'Experiment': exp,
-                            'Subject': subj,
-                            'Sample': cell['samp'],
-                            'Replicate': cell['rep'],
-                            'Subject Name': subj_name
-                        })
-                else:
-                    data_rows.append({
-                        'Well': well_id, 'Type': 'Empty', 
-                        'Concentration': '', 'Experiment': '', 'Subject': '', 'Sample': '', 'Replicate': '',
-                        'Subject Name': ''
-                    })
+        # Create map of subject names for export
+        # subject_names is dict of StringVars
+        name_map = {k: v.get() for k, v in self.subject_names.items()}
         
-        df = pd.DataFrame(data_rows)
-        df.to_csv(filename, index=False)
-        messagebox.showinfo("Success", f"Exported to {filename}")
+        try:
+            df = designer_core.grid_to_dataframe(self.grid_data, name_map)
+            df.to_csv(filename, index=False)
+            messagebox.showinfo("Success", f"Exported to {filename}")
+        except PermissionError:
+             messagebox.showerror("Error", f"Permission Denied: Could not save to {filename}.\nPlease close the file if it is open in Excel.")
+        except Exception as e:
+             messagebox.showerror("Error", f"Failed to export CSV: {e}")
 
     def import_csv(self):
         filename = filedialog.askopenfilename(filetypes=[("CSV", "*.csv")])
@@ -583,87 +507,20 @@ class ElisaPlateDesigner:
         try:
             df = pd.read_csv(filename)
             self.save_state()
-            self.grid_data = {}
-            self.subject_names = {} # clear names
             
-            # Reset counters based on Max values found
-            max_exp = 0
+            # Use Core
+            new_grid, new_names, state = designer_core.dataframe_to_grid(df)
             
-            # Rebuild grid
-            for _, row in df.iterrows():
-                # Well -> (c, r)
-                well = row['Well']
-                
-                col_char = well[0]
-                row_str = well[1:]
-                c = ord(col_char) - ord('A')
-                r = int(row_str) - 1
-                
-                if 0 <= c < COLS and 0 <= r < ROWS:
-                    t = row['Type']
-                    if t == 'Calibration':
-                        self.grid_data[(c, r)] = {
-                            'type': 'CAL',
-                            'conc': row['Concentration']
-                        }
-                    elif t == 'Experiment':
-                         exp = int(row['Experiment'])
-                         subj = int(row['Subject'])
-                         samp = int(row['Sample'])
-                         rep = int(row['Replicate'])
-                         
-                         # Check for name
-                         name = str(row.get('Subject Name', ''))
-                         if name == 'nan': name = ''
-                         
-                         if (exp, subj) not in self.subject_names:
-                             v = tk.StringVar(value=name)
-                             self.subject_names[(exp, subj)] = v
-                         
-                         self.grid_data[(c, r)] = {
-                             'type': 'EXP',
-                             'exp': exp,
-                             'subj': subj,
-                             'samp': samp,
-                             'rep': rep
-                         }
-                         if exp > max_exp: max_exp = exp
+            self.grid_data = new_grid
             
-            # Restore state vars
-            self.current_exp = max(1, max_exp)
-            max_subj_in_curr = 0
-            max_samp_in_curr_subj = 0
+            # Restore names (convert strings to Vars)
+            self.subject_names = {}
+            for k, name in new_names.items():
+                self.subject_names[k] = tk.StringVar(value=name)
             
-            for cell in self.grid_data.values():
-                if cell.get('type') == 'EXP' and cell['exp'] == self.current_exp:
-                    if cell['subj'] > max_subj_in_curr:
-                        max_subj_in_curr = cell['subj']
-            # Find max sample in the max subject
-            for cell in self.grid_data.values():
-                 if cell.get('type') == 'EXP' and cell['exp'] == self.current_exp and cell['subj'] == max_subj_in_curr:
-                     if cell['samp'] > max_samp_in_curr_subj:
-                         max_samp_in_curr_subj = cell['samp']
-
-            self.current_subj = max_subj_in_curr if max_subj_in_curr > 0 else 1
-            # If nothing imported logic might differ, 
-            # but if we imported data, we want next sample to be +1 of max.
-            # If no data for this subject, start at 0.
-            # We must verify if max_samp_in_curr_subj is truly "set".
-            # Initial max_samp_in_curr_subj = 0.
-            # If data exists: e.g. t0, t1. Max is 1. Next should be 2.
-            # If data exists: t0. Max is 0. Next should be 1.
-            # If NO data: Max is 0 (default). Next should be 0.
-            
-            # Count cells for this subject
-            count_subj_cells = 0
-            for cell in self.grid_data.values():
-                 if cell.get('type') == 'EXP' and cell['exp'] == self.current_exp and cell['subj'] == max_subj_in_curr:
-                     count_subj_cells += 1
-            
-            if count_subj_cells > 0:
-                self.next_sample_id = max_samp_in_curr_subj + 1
-            else:
-                self.next_sample_id = 0
+            self.current_exp = state['current_exp']
+            self.current_subj = state['current_subj']
+            self.next_sample_id = state['next_sample_id']
             
             self.draw_grid()
             self.refresh_sidebar()
