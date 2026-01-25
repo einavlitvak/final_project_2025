@@ -14,12 +14,12 @@ This project automates the analysis of ELISA (Enzyme-Linked Immunosorbent Assay)
     -   **Calibrate** concentrations using a linear regression model from standard curves.
     -   **Analyze** statistics automatically (Normality, Homogeneity, T-Test/ANOVA, Post-Hoc).
     -   **Visualize** results with publication-ready plots.
-    -   **Export** a "Master File" combining raw data and full validation reports.
+    -   **Export** The results to a new sheet in the source excel and also to a "Master File" combining raw data and full validation reports, helping to keep track of all the data in one place.
 
 ### 2. Input and Output
 *   **Input**:
     *   **Layout File**: A CSV defining which well contains which sample/standard (created via the built-in Layout Designer).
-    *   **Instrument File**: The raw `.xlsx` or `.csv` export from the Tecan Infinite M200 Pro machine.
+    *   **Instrument File**: The raw `.xlsx` or `.csv` export from the Tecan Spark plate reader.
 *   **Output**:
     *   **Master Excel File**: Appends a new sheet with Raw Data + Analysis Tables.
     *   **Plots**: `calibration_curve.png`, `results_bar_graph.png`, `significance_plot.png`.
@@ -51,6 +51,8 @@ This project automates the analysis of ELISA (Enzyme-Linked Immunosorbent Assay)
 3.  Follow the GUI prompts to select files and configure analysis parameters.
 
     > **Quick Start with Examples**:
+    > *   Design a layout using `designer/elisa_layout_designer.py`, export it as a CSV file.
+    However, to run the the analyzer, using the example_layout.csv file is the only viable option:
     > *   For **Layout CSV**, select: `example_layout.csv`
     > *   For **Instrument Excel**, select: `insulin ELISA example.xlsx`
     > *   For **Master Excel**, select: `insulin ELISA example_master.xlsx`

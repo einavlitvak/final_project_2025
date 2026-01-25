@@ -157,7 +157,8 @@ def run_statistical_analysis(exp_df, config):
         results['High_CV'] = high_cv
         
     # 3. Pivot for Testing
-    pivoted = grouped.pivot(index='Subject Name', columns='Timepoint', values='mean')
+    # Use 'Subject' (ID) as index to avoid duplicates if names are identical
+    pivoted = grouped.pivot(index='Subject', columns='Timepoint', values='mean')
     
     selected_tps = config['timepoints']
     valid_tps = [tp for tp in selected_tps if tp in pivoted.columns]

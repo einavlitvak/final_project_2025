@@ -73,5 +73,31 @@ class TestElisaCore(unittest.TestCase):
         
         self.assertAlmostEqual(merged.iloc[0]['OD_Corr'], 0.9)
 
+    def test_run_statistical_analysis_duplicate_names(self):
+        """Test stats when two different subjects have the same name."""
+        # Create dataframe with 3 subjects having name "Control"
+        # We need n >= 3 for the stats logic to proceed
+        data = pd.DataFrame({
+            'Type': ['Experiment'] * 6,
+            'Subject': [1, 1, 2, 2, 3, 3],
+            'Subject Name': ['Control', 'Control', 'Control', 'Control', 'Control', 'Control'],
+            'Timepoint': ['t0', 't1', 't0', 't1', 't0', 't1'],
+            'Calculated_Conc': [10, 20, 12, 22, 11, 21]
+        })
+        
+        config = {
+            'timepoints': ['t0', 't1'],
+            'paired': True,
+            'tails': 'two-sided',
+            'posthoc': False
+        }
+        
+        # This should NOT start a ValueError
+        try:
+            results = elisa_core.run_statistical_analysis(data, config)
+            self.assertIn('p_value', results)
+        except ValueError as e:
+            self.fail(f"run_statistical_analysis raised ValueError with duplicate names: {e}")
+
 if __name__ == '__main__':
     unittest.main()
