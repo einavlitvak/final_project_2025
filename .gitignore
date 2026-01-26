@@ -27,9 +27,7 @@ venv/
 ENV/
 
 # Excel & Data (Optional: ignore data files to keep repo clean)
-*.xlsx
-*.xls
-*.csv
+
 # Keep example data if needed, but usually ignore user data
 
 # Plots
